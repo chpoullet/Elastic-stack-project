@@ -1,0 +1,68 @@
+version: '3.2'
+
+services:
+  elasticsearch:
+    build:
+      context: Dockerfiles/Elasticsearch/
+    volumes:
+      - type: bind
+        source: ./Dockerfiles/Elasticsearch/config/elasticsearch.yml
+        target: /usr/share/elasticsearch/config/elasticsearch.yml
+        read_only: true
+      - type: volume
+        source: elasticsearch
+        target: /usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      ES_JAVA_OPTS: "-Xmx2048m -Xms2048m"
+      ELASTIC_PASSWORD: changeme
+      discovery.type: single-node
+    networks:
+      - elk
+
+  logstash:
+    build:
+      context: Dockerfiles/Logstash/
+    volumes:
+      - type: bind
+        source: ./Dockerfiles/Logstash/config/logstash.yml
+        target: /usr/share/logstash/config/logstash.yml
+        read_only: true
+      - type: bind
+        source: ./Dockerfiles/Logstash/pipeline
+        target: /usr/share/logstash/pipeline
+        read_only: true
+    ports:
+      - "5000:5000/tcp"
+      - "5000:5000/udp"
+      - "9600:9600"
+    environment:
+      ES_JAVA_OPTS: "-Xmx2048m -Xms2048m"
+    networks:
+      - elk
+    depends_on:
+      - elasticsearch
+
+  kibana:
+    build:
+      context: Dockerfiles/Kibana/
+    volumes:
+      - type: bind
+        source: ./Dockerfiles/Kibana/config/kibana.yml
+        target: /usr/share/kibana/config/kibana.yml
+        read_only: true
+    ports:
+      - "5601:5601"
+    networks:
+      - elk
+    depends_on:
+      - elasticsearch
+
+networks:
+  elk:
+    driver: bridge
+
+volumes:
+  elasticsearch:
